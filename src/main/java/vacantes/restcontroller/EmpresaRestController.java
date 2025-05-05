@@ -153,9 +153,9 @@ public class EmpresaRestController {
 		return new ResponseEntity<>("La vacante no se ha podido encontrar", HttpStatus.FOUND);
 	}
 	
-	@PutMapping("/asignarVacante/{idVacante}/{email}")
-	public ResponseEntity<?> asignarCandidato(@PathVariable int idVacante, @PathVariable String email) {
-
+	@PutMapping("/asignarVacante/{idVacante}")
+	public ResponseEntity<?> asignarCandidato(@PathVariable int idVacante) {
+		String email = SecurityContextHolder.getContext().getAuthentication().getName();
 		Vacante vacanteBuscada = vacanteService.buscarUno(idVacante);
 		vacanteBuscada.setEstatus(Estatus.CUBIERTA);
 		vacanteService.modificarUno(vacanteBuscada);
