@@ -2,6 +2,7 @@ package vacantes.restcontroller;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +21,14 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletRequest;
 import vacantes.jwt.JwtTokenUtil;
 import vacantes.modelo.dto.EmpresaAltaDto;
-import vacantes.modelo.dto.EmpresaListasDto;
+import vacantes.modelo.dto.EmpresaDetalleDto;
 import vacantes.modelo.dto.EmpresaModificarDto;
+import vacantes.modelo.dto.SolicitudListasDto;
 import vacantes.modelo.dto.UsuarioAltaDto;
-import vacantes.modelo.dto.UsuarioListasDto;
+import vacantes.modelo.dto.UsuarioDetalleDto;
+import vacantes.modelo.dto.UsuarioDto;
 import vacantes.modelo.dto.UsuarioModificarDto;
+import vacantes.modelo.dto.VacanteListasDto;
 import vacantes.modelo.entities.Categoria;
 import vacantes.modelo.entities.Empresa;
 import vacantes.modelo.entities.Rol;
@@ -60,14 +64,46 @@ public class AdminRestController {
 	@Autowired
 	private JwtTokenUtil jwtTokenUtil;
 	
+	@GetMapping("/verVacantes")
+	public ResponseEntity<?> verTodasVacantes(HttpServletRequest request) {
+	    String authHeader = request.getHeader("Authorization");
+	    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+
+            List<Vacante> vacantes = vacanteService.buscarTodo();
+
+            List<VacanteListasDto> vacantesDto = vacantes.stream()
+            		.map(vacante ->{
+            			VacanteListasDto dto = new VacanteListasDto();
+            			return dto.convertToVacanteListasDto(vacante);
+            		})
+            			.collect(Collectors.toList());
+        
+            return new ResponseEntity<>(vacantesDto, HttpStatus.OK);
+	        }
+	    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autorizado");
+
+	}
+		
 	@PostMapping("/altaEmpresa")
 	public ResponseEntity<?> altaEmpresa(@RequestBody EmpresaAltaDto altaDto, HttpServletRequest request){
 	    boolean token = isValidToken(request);
-
-	    if (token == false) {
-	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
+	    if (!token) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	            .body(Map.of("mensaje", "Token JWT no válido o no proporcionado"));
 	    }
 
+	    //comprobar si existe antes de insertar
+	    if (usuarioService.buscarUno(altaDto.getEmail()) != null) {
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	            .body(Map.of("mensaje", "Ya existe un usuario con ese email"));
+	    }
+
+	    if (empresaService.buscarEmpresaPorEmail(altaDto.getEmail()) != null) {
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	            .body(Map.of("mensaje", "Ya existe una empresa con ese CIF"));
+	    }
+
+	    //crea user
 	    Usuario usuarioEmpresa = new Usuario();
 	    usuarioEmpresa.setRol(Rol.EMPRESA);
 	    usuarioEmpresa.setPassword(generarPasswordAleatoria(10));
@@ -77,6 +113,7 @@ public class AdminRestController {
 	    usuarioEmpresa.setEmail(altaDto.getEmail());
 	    usuarioService.insertUno(usuarioEmpresa);
 
+	    //crea empresa
 	    Empresa empresaBuscada = new Empresa();
 	    empresaBuscada.setCif(altaDto.getCif());
 	    empresaBuscada.setNombreEmpresa(altaDto.getNombreEmpresa());
@@ -84,11 +121,12 @@ public class AdminRestController {
 	    empresaBuscada.setPais(altaDto.getPais());
 	    empresaBuscada.setUsuario(usuarioEmpresa);
 
-	    if(empresaService.insertUno(empresaBuscada) == true) {
-	        return new ResponseEntity<>("La empresa se ha creado con éxito", HttpStatus.CREATED);
-	    }
-	    else {
-	        return new ResponseEntity<>("No se ha podido crear la empresa", HttpStatus.BAD_REQUEST);
+	    if (empresaService.insertUno(empresaBuscada)) {
+	        return ResponseEntity.status(HttpStatus.CREATED)
+	            .body(Map.of("mensaje", "La empresa se ha creado con éxito"));
+	    } else {
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	            .body(Map.of("mensaje", "No se ha podido crear la empresa"));
 	    }
 	}
 	
@@ -102,12 +140,12 @@ public class AdminRestController {
 			}
 			
 			List<Empresa> listaAux = empresaService.buscarTodo();
-			
+		
 			if(!listaAux.isEmpty()) {
-				List<EmpresaListasDto> empresaDto = listaAux.stream()
+				List<EmpresaDetalleDto> empresaDto = listaAux.stream()
 						.map(empresa ->{
-							EmpresaListasDto dto = new EmpresaListasDto();
-							return dto.convertToEmpresaListasDto(empresa);
+							EmpresaDetalleDto dto = new EmpresaDetalleDto();
+							return dto.convertToEmpresaDetalleDto(empresa);
 						})
 				.collect(Collectors.toList());
 				
@@ -140,7 +178,7 @@ public class AdminRestController {
 				empresaMod.setPais(empresaDto.getPais());
 				
 				if (empresaService.modificarUno(empresaMod) == 1) {
-					return new ResponseEntity<>("La empresa se modificó correctamente", HttpStatus.OK);
+					return new ResponseEntity<>(empresaMod, HttpStatus.OK);
 				} else {
 					return new ResponseEntity<>("La empresa no se ha podido modificar", HttpStatus.NOT_MODIFIED);
 				}
@@ -151,6 +189,29 @@ public class AdminRestController {
 		}
 	}
 
+	@GetMapping("/getEmpresaId/{idEmpresa}")
+	public ResponseEntity<?> getVacanteById(@PathVariable int idEmpresa, HttpServletRequest request) {
+	    try {
+	        boolean token = isValidToken(request);
+	        if (!token) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
+	        }
+
+	        Empresa empresa = empresaService.buscarUno(idEmpresa);
+	        if (empresa != null) {
+	           
+	        	EmpresaModificarDto dto = new EmpresaModificarDto().convertToEmpresaModificarDto(empresa);
+	            
+	            return new ResponseEntity<>(dto, HttpStatus.OK);
+	        } else {
+	            return new ResponseEntity<>("Vacante no encontrada", HttpStatus.NOT_FOUND);
+	        }
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new ResponseEntity<>("Error al obtener la vacante: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+	    }
+	}
 	
 	@DeleteMapping("/eliminarEmpresa/{idEmpresa}")
 	public ResponseEntity<?> eliminarEmpresa(@PathVariable int idEmpresa, HttpServletRequest request) {
@@ -158,14 +219,15 @@ public class AdminRestController {
 	        boolean token = isValidToken(request);
 
 	        if (!token) {
-	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
+	        	return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+		                .body(Map.of("mensaje", "Token JWT no válido o no proporcionado"));
 	        }
 
 	        List<Vacante> vacantesAsociadas = vacanteService.buscarVacantePorEmpresa(idEmpresa);
 
 	        if (vacantesAsociadas.isEmpty()) {
 	            empresaService.eliminarUno(idEmpresa);
-	            return new ResponseEntity<>("Empresa eliminada correctamente", HttpStatus.OK);
+	            return ResponseEntity.ok(Map.of("mensaje", "Empresa eliminada correctamente"));
 	        } else {
 	         
 	            for (Vacante vacante : vacantesAsociadas) {
@@ -180,27 +242,33 @@ public class AdminRestController {
 
 	            empresaService.eliminarUno(idEmpresa);
 	            
-	            return new ResponseEntity<>("Empresa, vacantes y solicitudes asociadas eliminadas correctamente", HttpStatus.OK);
+	            return ResponseEntity.ok(Map.of("mensaje", "Empresa, vacantes y solicitudes asociadas eliminadas correctamente"));
 	        }
 	    } catch (Exception e) {
 	        e.printStackTrace();
-	        return new ResponseEntity<>("No se ha podido eliminar la empresa: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	        .body(Map.of("mensaje", "No se ha podido eliminar la empresa: " + e.getMessage()));
 	    }
 	}
-	
+		
 	@PostMapping("/altaCategoria")
-	public ResponseEntity<?>altaCategoria(@RequestBody Categoria categoria, HttpServletRequest request){
-		boolean token = isValidToken(request);
+	public ResponseEntity<?> altaCategoria(@RequestBody Categoria categoria, HttpServletRequest request) {
+	    boolean token = isValidToken(request);
 
-		if (token == false) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
-		}
-			Categoria categoriaNueva = new Categoria();
-			
-			categoriaNueva.setDescripcion(categoria.getDescripcion());
-			categoriaNueva.setNombre(categoria.getNombre());
-			categoriaService.insertUno(categoriaNueva);
-		return new ResponseEntity<>("Categoría creada con ÉXITO", HttpStatus.CREATED);
+	    if (!token) {
+	        return ResponseEntity
+	            .status(HttpStatus.UNAUTHORIZED)
+	            .body(Map.of("mensaje", "Token JWT no válido o no proporcionado"));
+	    }
+
+	    Categoria categoriaNueva = new Categoria();
+	    categoriaNueva.setDescripcion(categoria.getDescripcion());
+	    categoriaNueva.setNombre(categoria.getNombre());
+	    categoriaService.insertUno(categoriaNueva);
+
+	    return ResponseEntity
+	        .status(HttpStatus.CREATED)
+	        .body(Map.of("mensaje", "Categoría creada con ÉXITO"));
 	}
 	
 	@GetMapping("/verCategorias")
@@ -226,28 +294,52 @@ public class AdminRestController {
 		}
 	}
 	
-	@PutMapping("/modificarCategoria/{idCategoria}")
-	public ResponseEntity<?>modificarCategoria(@PathVariable int idCategoria, @RequestBody Categoria categoria, HttpServletRequest request){
-		try {
-			boolean token = isValidToken(request);
+	@GetMapping("/getCategoriaId/{idCategoria}")
+	public ResponseEntity<?> getCategoriaById(@PathVariable int idCategoria, HttpServletRequest request) {
+	    try {
+	        boolean token = isValidToken(request);
+	        if (!token) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
+	        }
 
-			if (token == false) {
-				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
-			}
+	        Categoria categoria = categoriaService.buscarUno(idCategoria);
+	        if (categoria != null) {
+	           	            
+	            return new ResponseEntity<>(categoria, HttpStatus.OK);
+	        } else {
+	            return new ResponseEntity<>("Vacante no encontrada", HttpStatus.NOT_FOUND);
+	        }
 
-				categoria.setIdCategoria(idCategoria);
-				if (categoriaService.modificarUno(categoria) == 1) {
-					return new ResponseEntity<>("La categoria se modificó correctamente", HttpStatus.OK);
-				} else {
-					return new ResponseEntity<>("La categoria no se ha podido modificar", HttpStatus.NOT_MODIFIED);
-				}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			return new ResponseEntity<>("No se ha podido modificar la categoria", HttpStatus.NOT_MODIFIED);
-		}
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new ResponseEntity<>("Error al obtener la vacante: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+	    }
 	}
 
+	@PutMapping("/modificarCategoria/{idCategoria}")
+	public ResponseEntity<?> modificarCategoria(@PathVariable int idCategoria, @RequestBody Categoria categoria, HttpServletRequest request) {
+	    try {
+	        boolean token = isValidToken(request);
+
+	        if (!token) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body(Map.of("mensaje", "Token JWT no válido o no proporcionado"));
+	        }
+
+	        categoria.setIdCategoria(idCategoria);
+	        if (categoriaService.modificarUno(categoria) == 1) {
+	            return ResponseEntity.ok(Map.of("mensaje", "La categoría se modificó correctamente"));
+	        } else {
+	            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	                .body(Map.of("mensaje", "La categoría no se ha podido modificar"));
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	        	    .body(Map.of("mensaje", "Error interno: No se ha podido modificar la categoría."));
+	    }
+	}
+	
 	@DeleteMapping("/eliminarCategoria/{idCategoria}")
 	public ResponseEntity<?> eliminarCat(@PathVariable int idCategoria, HttpServletRequest request) {
 	    try {
@@ -255,7 +347,7 @@ public class AdminRestController {
 
 	        if (!token) {
 	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-	                    .body("Token JWT no válido o no proporcionado");
+	                .body(Map.of("mensaje", "Token JWT no válido o no proporcionado"));
 	        }
 
 	        List<Vacante> listaVacantes = vacanteService.buscarVacantePorCategoria(idCategoria);
@@ -280,39 +372,70 @@ public class AdminRestController {
 
 	        categoriaService.eliminarUno(idCategoria);
 
+	        String mensaje;
+
 	        if (tieneVacantes && tieneSolicitudes) {
-	            return new ResponseEntity<>("Se eliminaron la categoría, las solicitudes y las vacantes asociadas", 
-	                    HttpStatus.OK);
+	            mensaje = "Se eliminaron la categoría, las solicitudes y las vacantes asociadas";
 	        } else if (tieneVacantes) {
-	            return new ResponseEntity<>("Se eliminó correctamente la categoría y sus vacantes (sin solicitudes)", 
-	                    HttpStatus.OK);
+	            mensaje = "Se eliminó correctamente la categoría y sus vacantes (sin solicitudes)";
 	        } else {
-	            return new ResponseEntity<>("Se eliminó la categoría (sin vacantes ni solicitudes asociadas)", 
-	                    HttpStatus.OK);
+	            mensaje = "Se eliminó la categoría (sin vacantes ni solicitudes asociadas)";
 	        }
+
+	        return ResponseEntity.ok(Map.of("mensaje", mensaje));
+
 	    } catch (Exception e) {
 	        e.printStackTrace();
-	        return new ResponseEntity<>("No se ha podido eliminar la categoría: " + e.getMessage(), 
-	                HttpStatus.BAD_REQUEST);
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	            .body(Map.of("mensaje", "No se ha podido eliminar la categoría: " + e.getMessage()));
 	    }
 	}
- 
-	@PutMapping("/eliminarUsuario/{email}")
-	public ResponseEntity<?>eliminarUsuario(@PathVariable String email, HttpServletRequest request){
-		try {
-			boolean token = isValidToken(request);
+	
+	@GetMapping("/getUsuarioId/{email}")
+	public ResponseEntity<?> getusuarioById(@PathVariable String email, HttpServletRequest request) {
+	    try {
+	        boolean token = isValidToken(request);
+	        if (!token) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
+	        }
 
-			if (token == false) {
-				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
-			}
-			Usuario usuarioBuscado = usuarioService.buscarUno(email);
-			usuarioBuscado.setEnabled(0);
-			usuarioService.modificarUno(usuarioBuscado);
-			return new ResponseEntity<>("El usuario se ha eliminado correctamente", HttpStatus.OK);
-		} catch (Exception e) {
-			e.printStackTrace();
-			return new ResponseEntity<>("No se ha podido eliminar la categoria" + e.getMessage(), HttpStatus.BAD_REQUEST);
-		}
+	        Usuario usuario = usuarioService.buscarUno(email);
+	        if (usuario != null) {
+	           
+	        	UsuarioDto dto = new UsuarioDto().convertToUsuario(usuario);
+	            
+	            return new ResponseEntity<>(dto, HttpStatus.OK);
+	        } else {
+	            return new ResponseEntity<>("Vacante no encontrada", HttpStatus.NOT_FOUND);
+	        }
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return new ResponseEntity<>("Error al obtener la vacante: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+	    }
+	}
+	
+	@PutMapping("/eliminarUsuario/{email}")
+	public ResponseEntity<?> eliminarUsuario(@PathVariable String email, HttpServletRequest request) {
+	    try {
+	        boolean token = isValidToken(request);
+
+	        if (!token) {
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body(Map.of("mensaje", "Token JWT no válido o no proporcionado"));
+	        }
+
+	        Usuario usuarioBuscado = usuarioService.buscarUno(email);
+	        usuarioBuscado.setEnabled(0);
+	        usuarioService.modificarUno(usuarioBuscado);
+
+	        return ResponseEntity.ok(Map.of("mensaje", "El usuario se ha eliminado correctamente"));
+
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	            .body(Map.of("mensaje", "No se ha podido eliminar el usuario: " + e.getMessage()));
+	    }
 	}
 	
 	@PostMapping("/altaAdmon")
@@ -320,7 +443,8 @@ public class AdminRestController {
 	    try {
 	        boolean token = isValidToken(request);
 	        if (!token) {
-	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token JWT no válido o no proporcionado");
+	            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	                .body(Map.of("mensaje", "Token JWT no válido o no proporcionado"));
 	        }
 	        
 	        Usuario usuarioBuscado = new Usuario();
@@ -331,11 +455,19 @@ public class AdminRestController {
 	        usuarioBuscado.setFechaRegistro(new Date());
 	        usuarioBuscado.setPassword(generarPasswordAleatoria(10));
 	        usuarioBuscado.setRol(Rol.ADMON);
-	        if(usuarioService.insertUno(usuarioBuscado) == true);
-	        	return new ResponseEntity<>("El usuario se creó correctamente", HttpStatus.CREATED);
+
+	        if (usuarioService.insertUno(usuarioBuscado)) {
+	            return ResponseEntity.status(HttpStatus.CREATED)
+	                .body(Map.of("mensaje", "El usuario se creó correctamente"));
+	        } else {
+	            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+	                .body(Map.of("mensaje", "No se pudo crear el usuario"));
+	        }
+
 	    } catch (Exception e) {
 	        e.printStackTrace();
-	        return new ResponseEntity<>("Error al dar de alta el usuario: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+	        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	            .body(Map.of("mensaje", "Error al dar de alta el usuario: " + e.getMessage()));
 	    }
 	}
 	
@@ -352,10 +484,10 @@ public class AdminRestController {
 			
 			if(!listUser.isEmpty()) {
 				
-				List<UsuarioListasDto> usuarioDto = listUser.stream()
+				List<UsuarioDetalleDto> usuarioDto = listUser.stream()
 						.map(usuario ->{
-							UsuarioListasDto dto = new UsuarioListasDto();
-							return dto.convertToUsuarioListasDto(usuario);
+							UsuarioDetalleDto dto = new UsuarioDetalleDto();
+							return dto.convertToUsuarioDetalleDto(usuario);
 						})
 						.collect(Collectors.toList());
 				
@@ -390,7 +522,7 @@ public class AdminRestController {
 	            usuarioMod.setEnabled(1);
 	            
 	            if (usuarioService.modificarUno(usuarioMod) == 1) {
-	                return new ResponseEntity<>("El usuario se modificó correctamente", HttpStatus.OK);
+	            	return new ResponseEntity<>(usuarioMod, HttpStatus.OK);
 	            } else {
 	                return new ResponseEntity<>("El usuario no se ha podido modificar", HttpStatus.NOT_MODIFIED);
 	            }
@@ -401,6 +533,53 @@ public class AdminRestController {
 	        e.printStackTrace();
 	        return new ResponseEntity<>("Usuario no modificado: " + e.getMessage(), HttpStatus.NOT_MODIFIED);
 	    }
+	}
+	
+	@GetMapping("/verTodasSolicitudes")
+    public ResponseEntity<?> verSolicitudes(HttpServletRequest request) {
+
+        List<Solicitud> listaux = solicitudService.buscarTodo();
+
+        if (!listaux.isEmpty()) {
+            List<SolicitudListasDto> solicitudDto = listaux.stream()
+                .map(solicitud -> {
+                    SolicitudListasDto dto = new SolicitudListasDto();
+                    return dto.convertToSolicitudDto(solicitud);
+                })
+                .collect(Collectors.toList());
+
+            return ResponseEntity.ok(solicitudDto);
+        }
+
+        //Esto ahora devuelve un JSON en vez de texto plano
+        Map<String, String> response = Map.of("mensaje", "No se encuentran vacantes disponibles");
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+	
+	@GetMapping("/verAdministradores")
+	public ResponseEntity<?> verAdministradores(HttpServletRequest request) {
+	    boolean token = isValidToken(request);
+	    if (!token) {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+	            .body(Map.of("mensaje", "Token JWT no válido o no proporcionado"));
+	    }
+
+	    List<Usuario> admins = usuarioService.buscarTodo().stream()
+	        .filter(usuario -> usuario.getRol() == Rol.ADMON)
+	        .collect(Collectors.toList());
+
+	    if (admins.isEmpty()) {
+	        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+	            .body(Map.of("mensaje", "No hay administradores registrados"));
+	    }
+
+	    List<UsuarioDetalleDto> adminDtos = admins.stream().map(usuario -> {
+	        UsuarioDetalleDto dto = new UsuarioDetalleDto().convertToUsuarioDetalleDto(usuario);
+	        dto.setRol(usuario.getRol());
+	        return dto;
+	    }).collect(Collectors.toList());
+
+	    return ResponseEntity.ok(adminDtos);
 	}
 	
 	private String generarPasswordAleatoria(int length) {

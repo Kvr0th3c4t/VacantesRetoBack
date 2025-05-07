@@ -18,6 +18,7 @@ public class UsuarioDto {
     private String apellidos;
     private String email;
     private String rol;
+    private String password;
     
    
     public UsuarioDto convertToUsuario(Usuario usuario) {
@@ -27,6 +28,7 @@ public class UsuarioDto {
             mapper.map(Usuario::getEmail, UsuarioDto::setEmail);
             mapper.map(Usuario::getNombre, UsuarioDto::setNombre);
             mapper.map(Usuario::getApellidos, UsuarioDto::setApellidos);
+            mapper.map(Usuario::getPassword,UsuarioDto::setPassword);
         });
         return modelMapper.map(usuario, UsuarioDto.class);
     }

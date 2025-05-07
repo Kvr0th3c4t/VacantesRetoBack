@@ -27,9 +27,10 @@ public class UsuarioServiceImpl implements UsuarioService{
 	}
 
 	@Override
-	public Usuario buscarUno(String iUsuario) {
-		return usuarioRepository.findById(iUsuario).orElse(null);
+	public Usuario buscarUno(String email) {
+		return usuarioRepository.findById(email).orElse(null);
 	}
+	
 	@Override
 	public boolean insertUno(Usuario usuario) {
 	    try {
@@ -51,29 +52,7 @@ public class UsuarioServiceImpl implements UsuarioService{
 	        return false;
 	    }
 	}
-//	@Override
-//	public boolean insertUno(Usuario usuario) {
-//	    try {
-//	        // Para crear usuarios nuevos
-//	        if (usuarioRepository.existsById(usuario.getEmail())) {
-//	            // Si quieres sobrescribir, primero carga la entidad existente
-//	            Usuario existente = usuarioRepository.findById(usuario.getEmail()).orElse(null);
-//	            // Actualiza solo los campos necesarios
-//	            existente.setNombre(usuario.getNombre());
-//	            existente.setApellidos(usuario.getApellidos());
-//	            // etc.
-//	            usuarioRepository.save(existente);
-//	        } else {
-//	            // Para usuarios nuevos
-//	            usuarioRepository.save(usuario);
-//	        }
-//	        return true;
-//	    } catch (Exception e) {
-//	        e.printStackTrace();
-//	        return false;
-//	    }
-//	}
-
+	
 	@Override
 	public int eliminarUno(String iUsuario) {
 		try {
