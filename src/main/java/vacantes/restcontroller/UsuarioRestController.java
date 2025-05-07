@@ -138,11 +138,10 @@ public class UsuarioRestController {
             List<SolicitudListasDto> solicitudDto = listaux.stream()
                 .map(solicitud -> {
                     SolicitudListasDto dto = new SolicitudListasDto();
-                    
                     return dto.convertToSolicitudDto(solicitud);
                 })
                 .collect(Collectors.toList());
-            
+
             return ResponseEntity.ok(solicitudDto);
         }
 
