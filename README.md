@@ -51,6 +51,29 @@
 - `GET /api/usuario/verSolicitudes` - Ver mis solicitudes
 - `DELETE /api/usuario/solicitud/eliminar/{id}` - Eliminar solicitud
 
+## 🔐 Configuración de Seguridad
+
+### Variables de Entorno Requeridas
+```bash
+# Configuración de Base de Datos
+DB_USERNAME=tu_usuario_bd
+DB_PASSWORD=tu_password_bd
+
+# JWT Configuration
+JWT_SECRET=tu_clave_jwt_muy_larga_y_segura
+```
+
+### Configuración Local
+1. Copia `application-example.properties` a `application.properties`
+2. Configura tus credenciales locales
+3. **NUNCA** subas `application.properties` a Git
+
+### Notas de Seguridad
+- ✅ Credenciales sensibles en variables de entorno
+- ✅ JWT con claves seguras de 256+ caracteres  
+- ✅ Base de datos con usuarios específicos y permisos limitados
+- ✅ HTTPS en producción
+
 ## 🧪 Credenciales de Prueba
 
 Para probar todas las funcionalidades del sistema:
@@ -131,14 +154,26 @@ Antes de comenzar, asegúrate de tener instalado:
    ```
 
 4. **Configura application.properties**
-   ```properties
-   spring.datasource.url=jdbc:mysql://localhost:3306/vacantes_db
-   spring.datasource.username=vacantes_user
-   spring.datasource.password=password
+   ```bash
+   # Copia el archivo de ejemplo
+   cp src/main/resources/application-example.properties src/main/resources/application.properties
+   ```
    
-   jwt.secret=tu_clave_secreta_jwt
-   jwt.access.expiration=3600000
-   jwt.refresh.expiration=86400000
+   **Edita application.properties con tus valores:**
+   ```properties
+   # Database Configuration
+   spring.datasource.username=tu_usuario_bd
+   spring.datasource.password=tu_password_bd
+   
+   # JWT Configuration  
+   jwt.secret=tu_clave_jwt_secreta_muy_larga
+   ```
+   
+   **O usa variables de entorno:**
+   ```bash
+   export DB_USERNAME=vacantes_user
+   export DB_PASSWORD=tu_password
+   export JWT_SECRET=tu_clave_secreta
    ```
 
 5. **Instala las dependencias**
@@ -294,14 +329,13 @@ Si encuentras algún bug o tienes sugerencias:
 
 Este proyecto está bajo la Licencia MIT - mira el archivo [LICENSE](LICENSE) para más detalles.
 
-## 👨‍💻 Co-Autores
-
+## 👨‍💻 Autor
 **Paula Fernández**
-- Gihutb: https://github.com/Pafer10
+- Github: https://github.com/Pafer10/
 
 **Andrés Matabuena**
-- Github: https://github.com/DevYuco
-
+- Github: https://github.com/DevYuco/
+  
 **Adrián Carmona**
 - Email: adrianc.crim@hotmail.com
 - API: [api-vacantes.adriancc.com](https://api-vacantes.adriancc.com/)
