@@ -70,38 +70,6 @@ CREATE USER 'vacantes_user'@'localhost' IDENTIFIED BY 'vacantespass2025';
 GRANT ALL PRIVILEGES ON vacantes_BBDD_2025_RETO.* TO 'vacantes_user'@'localhost';
 FLUSH PRIVILEGES;
 
-INSERT INTO usuarios (email, nombre, apellidos, password, rol, enabled)
-VALUES ('admin@correo.com', 'Admin', 'Sistema', '{noop}admin', 'ADMON', 1);
-INSERT INTO usuarios (email, nombre, apellidos, password, rol, enabled)
-VALUES ('empresa@correo.com', 'Empresa', 'Empresario', '{noop}empresa', 'EMPRESA', 1);
-INSERT INTO usuarios (email, nombre, apellidos, password, rol, enabled)
-VALUES ('usuario@correo.com', 'Usuario', 'cliente', '{noop}1234', 'CLIENTE', 1);
-
-
--- Categorías
-INSERT INTO Categorias (nombre, descripcion) VALUES
-('Desarrollo Web', 'Trabajos relacionados con desarrollo frontend, backend y full stack.'),
-('Marketing Digital', 'Publicidad en línea, SEO, SEM, redes sociales.'),
-('Atención al Cliente', 'Soporte a clientes por teléfono, chat o correo.'),
-('Diseño Gráfico', 'Diseño de material visual y branding.');
-
--- Empresas (asociadas a email ya registrado)
-INSERT INTO Empresas (cif, nombre_empresa, direccion_fiscal, pais, email) VALUES
-('A12345678', 'Tech Solutions S.A.', 'Calle Falsa 123', 'España', 'empresa@correo.com'),
-('B87654321', 'Marketing Pro SL', 'Av. Digital 456', 'España', 'empresa@correo.com'); -- Reutilizamos el mismo email por ahora
-
-INSERT INTO Vacantes (nombre, descripcion, fecha, salario, estatus, destacado, imagen, detalles, id_categoria, id_empresa) VALUES
-('Desarrollador Frontend Angular', 'Se busca frontend con experiencia en Angular.', CURDATE(), 28000, 'CREADA', 1, 'https://picsum.photos/id/237/800/400', 'Trabajo presencial en Madrid.', 1, 1),
-('Especialista en SEO', 'Optimización de motores de búsqueda.', CURDATE(), 24000, 'CREADA', 0, 'https://images.unsplash.com/photo-1508830524289-0adcbe822b40?auto=format&fit=crop&w=800&q=80', 'Remoto 100%.', 2, 2),
-('Atención al cliente - Chat', 'Responder consultas por chat.', CURDATE(), 18000, 'CREADA', 0, 'https://images.unsplash.com/photo-1585222515068-7201a72c4181?auto=format&fit=crop&w=800&q=80', 'Turno de mañana.', 3, 1),
-('Diseñador UI/UX', 'Diseño de interfaces y experiencia de usuario.', CURDATE(), 30000, 'CREADA', 1, 'https://picsum.photos/id/1011/800/400', 'Figma, Adobe XD.', 4, 1);
-
-
-
--- Solicitudes (hechas por cliente registrado: usuario@correo.com)
-INSERT INTO Solicitudes (fecha, archivo, comentarios, curriculum, id_vacante, email) VALUES
-(CURDATE(), 'cv_usuario.pdf', 'Estoy muy interesado en esta vacante.', 'cv_usuario.pdf', 1, 'usuario@correo.com'),
-(CURDATE(), 'cv_usuario.pdf', 'Tengo experiencia previa.', 'cv_usuario.pdf', 2, 'usuario@correo.com');
 
 
 
