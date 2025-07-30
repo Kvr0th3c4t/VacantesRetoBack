@@ -31,3 +31,15 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Configuration files with sensitive data
+src/main/resources/application.properties
+src/main/resources/application-production.properties
+
+# Environment specific configs
+*.env
+.env.local
+.env.production
+
+# IDE sensitive files
+application-local.properties
