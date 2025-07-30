@@ -350,10 +350,10 @@ Este proyecto está bajo la Licencia MIT - mira el archivo [LICENSE](LICENSE) pa
 
 ## 📊 Estado del proyecto
 
-![GitHub issues](https://img.shields.io/github/issues/Kvr0th3c4t/innovatech-api)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/Kvr0th3c4t/innovatech-api)
-![GitHub stars](https://img.shields.io/github/stars/Kvr0th3c4t/innovatech-api)
-![GitHub forks](https://img.shields.io/github/forks/Kvr0th3c4t/innovatech-api)
+![GitHub issues](https://img.shields.io/github/issues/Kvr0th3c4t/VacantesRetoBack)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/Kvr0th3c4t/VacantesRetoBack)
+![GitHub stars](https://img.shields.io/github/stars/Kvr0th3c4t/VacantesRetoBack)
+![GitHub forks](https://img.shields.io/github/forks/Kvr0th3c4t/VacantesRetoBack)
 
 ---
 
